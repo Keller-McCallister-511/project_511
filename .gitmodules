@@ -1,0 +1,3 @@
+[submodule "ConfidNet"]
+	path = ConfidNet
+	url = https://github.com/valeoai/ConfidNet
