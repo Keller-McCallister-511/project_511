@@ -1,0 +1,8 @@
+click
+coloredlogs
+pyyaml
+scikit-learn
+setuptools
+torchsummary
+tqdm
+verboselogs
