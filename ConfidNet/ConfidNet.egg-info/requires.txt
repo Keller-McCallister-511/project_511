@@ -1,8 +1,8 @@
-click
-coloredlogs
 pyyaml
-scikit-learn
-setuptools
+coloredlogs
 torchsummary
-tqdm
 verboselogs
+setuptools
+tqdm
+click
+scikit-learn
