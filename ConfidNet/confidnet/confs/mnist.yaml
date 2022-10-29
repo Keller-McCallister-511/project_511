@@ -23,7 +23,7 @@ training:
         weight_decay: 0.0001
     lr_schedule:
     smoother: 0.1
-    metrics: ['accuracy', 'auc', 'ap_success', 'ap_errors']
+    metrics: ['accuracy', 'auc', 'ap_success', 'ap_errors', 'mean_iou']
     pin_memory: False
     num_workers: 2
     augmentations:
