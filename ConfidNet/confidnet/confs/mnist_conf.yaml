@@ -12,7 +12,7 @@ training:
     output_folder: ./output_conf
     task: classification
     learner: selfconfid
-    nb_epochs: 10
+    nb_epochs: 3
     batch_size: 128
     loss:
         name: selfconfid_mse
@@ -24,7 +24,7 @@ training:
         weight_decay: 0.0001
     lr_schedule:
     smoother: 0.1
-    metrics: ['accuracy', 'auc', 'ap_success', 'ap_errors', 'mean_iou']
+    metrics: ['accuracy', 'auc', 'ap_success', 'ap_errors']
     pin_memory: False
     num_workers: 2
     augmentations:

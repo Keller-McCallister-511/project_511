@@ -1,0 +1,4 @@
+epoch,lr,train/loss_nll,train/accuracy,train/auc,train/ap_success,train/ap_errors,val/loss_nll,val/accuracy,val/auc,val/ap_success,val/ap_errors,test/loss_nll,test/accuracy,test/auc,test/ap_success,test/ap_errors
+001,1.0e-03,6.0587e-03,80.41%,86.36%,96.35%,59.21%,3.1489e-03,89.35%,90.43%,98.73%,48.41%,3.0333e-03,89.87%,90.72%,98.83%,50.22%
+002,1.0e-03,2.9528e-03,89.27%,90.00%,98.64%,49.93%,2.4901e-03,91.07%,91.35%,99.05%,49.05%,2.4025e-03,91.45%,91.68%,99.13%,48.83%
+003,1.0e-03,2.5046e-03,90.75%,90.89%,98.94%,48.57%,2.1910e-03,91.95%,92.35%,99.24%,50.01%,2.1251e-03,92.30%,92.37%,99.29%,49.63%
