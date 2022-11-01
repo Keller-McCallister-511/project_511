@@ -13,13 +13,6 @@ else:
 
 print('Pytorch Version: ', torch.__version__, ' Device: ', device)
 
-'''mlp_0 = nn.Sequential(
-    nn.Linear(784, 1000),
-    nn.ReLU(),
-    nn.Linear(1000, 10),
-    nn.LogSoftmax(dim=1)
-)'''
-
 class MLP(nn.Module):
     def __init__(self):
         super().__init__()
