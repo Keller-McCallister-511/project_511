@@ -1,4 +1,4 @@
-from unicodedata import unidata_version
+import argparse
 import torch
 from torch import nn 
 import torch.nn.functional as F
@@ -49,7 +49,6 @@ class MLP_Confid(nn.Module):
         return pred, uc
 
 model = MLP_Confid()
-model.load_state_dict(torch.load("../saved_models/mlp_resume.pt"), strict=False)
 
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
@@ -101,17 +100,31 @@ def test(model):
             target = target.data.cpu().numpy()
             y_true.extend(target)
             output = [op, uncertainty]
-            results.extend(output)
+            results.append(output)
+            
     
     test_loss/=len(test_loader.dataset)
     print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) ')
     conf_mat = confusion_matrix(y_pred, y_true)
     print(conf_mat)
-    print(results[5])
-
+    for i in results:
+        print(i[0][0])
+        print(i[1][0].item())
 if __name__ == '__main__':
-    for epoch in range(1,2):
-        train(epoch)
-    test(model)
+    parser = argparse.ArgumentParser(description="MLP_0")
+    parser.add_argument('--epochs', type=int, default=25, metavar='N', help='number of epochs for training (default: 25)')
+    parser.add_argument('--train', action='store_true', default=False, help='train model')
+    parser.add_argument('--test', action='store_true', default=False, help='test model')
+    args=parser.parse_args()
+
+    if args.train:
+        for epoch in range(1, args.epochs+1):
+            model.load_state_dict(torch.load("../saved_models/mlp_resume.pt"), strict=False)
+            train(epoch)
+            torch.save(model.state_dict(), f"../saved_models/mlp_confidence.pt")
+    
+    if args.test:
+        model.load_state_dict(torch.load('../saved_models/mlp_confidence.pt'))
+        test(model)
         
     

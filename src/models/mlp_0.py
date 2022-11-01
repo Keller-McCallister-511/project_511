@@ -1,5 +1,5 @@
+import argparse
 from random import shuffle
-from xml.etree.ElementPath import prepare_descendant
 import torch
 from torch import nn 
 import torch.nn.functional as F
@@ -100,7 +100,18 @@ def test(model):
     print(conf_mat)
 
 if __name__ == '__main__':
-    for epoch in range(1,3):
-        train(epoch)
-    torch.save(mlp_0.state_dict(), f"../saved_models/mlp_resume.pt")
-    test(mlp_0)
+    parser = argparse.ArgumentParser(description="MLP_0")
+    parser.add_argument('--epochs', type=int, default=25, metavar='N', help='number of epochs for training (default: 25)')
+
+    parser.add_argument('--train', action='store_true', default=False, help='train model')
+    parser.add_argument('--test', action='store_true', default=False, help='test model')
+    args=parser.parse_args()
+
+    if args.train:
+        for epoch in range(1, args.epochs+1):
+            train(epoch)
+            torch.save(mlp_0.state_dict(), f"../saved_models/mlp_resume.pt")
+    
+    if args.test:
+        mlp_0.load_state_dict(torch.load('../saved_models/mlp_resume.pt'))
+        test(mlp_0)
