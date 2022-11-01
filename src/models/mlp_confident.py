@@ -31,7 +31,6 @@ class MLP_Confid(nn.Module):
         self.uc3=nn.Linear(400,400)
         self.uc4=nn.Linear(400,400)
         self.uc5=nn.Linear(400,1)
-        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         op = x.view(-1, self.fc1.in_features)
@@ -46,15 +45,13 @@ class MLP_Confid(nn.Module):
         uc = F.relu(self.uc4(uc))
         uc = self.uc5(uc)
 
-        op = self.fc2(op)
-        pred = self.softmax(op)
+        pred = self.fc2(op)
         return pred, uc
 
 model = MLP_Confid()
 model.load_state_dict(torch.load("../saved_models/mlp_resume.pt"), strict=False)
 
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-#criterion = SelfConfidMSELoss()
 
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('../data/mnist', train=True, download=True, transform=transforms.Compose([
@@ -84,6 +81,7 @@ def train(epoch):
 def test(model):
     y_pred=[]
     y_true=[]
+    results=[]
     model.eval()
     test_loss = 0
     correct=0
@@ -96,23 +94,23 @@ def test(model):
             pred = output[0].data.max(1, keepdim=True)[1]
             correct+= pred.eq(target.data.view_as(pred)).sum()
             op = output[0]
-            op = (torch.max(torch.exp(op),1)[1]).data.cpu().numpy()
+            op = (torch.max(op,1)[1]).data.cpu().numpy()
             uncertainty = output[1]
             uncertainty = torch.sigmoid(uncertainty)
             y_pred.extend(op)
             target = target.data.cpu().numpy()
             y_true.extend(target)
             output = [op, uncertainty]
-            #print(f'Pred: {op}\tUncertainty: {uncertainty}')
-            print(output)
+            results.extend(output)
     
     test_loss/=len(test_loader.dataset)
     print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) ')
     conf_mat = confusion_matrix(y_pred, y_true)
     print(conf_mat)
+    print(results[5])
 
 if __name__ == '__main__':
-    for epoch in range(1,6):
+    for epoch in range(1,2):
         train(epoch)
     test(model)
         

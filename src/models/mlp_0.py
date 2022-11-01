@@ -23,15 +23,19 @@ print('Pytorch Version: ', torch.__version__, ' Device: ', device)
 class MLP(nn.Module):
     def __init__(self):
         super().__init__()
-        self.dropout = True
+        self.dropout = False
         self.fc1=nn.Linear(784, 1000)
         self.fc2=nn.Linear(1000, 10)
+        #self.fc3=nn.Linear(256, 512)
+        #self.fc4=nn.Linear(512,10)
         self.fc_drop = nn.Dropout(0.3)
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
         op = x.view(-1, self.fc1.in_features)
         op = F.relu(self.fc1(op))
+        #op = F.relu(self.fc2(op))
+        #op = F.relu(self.fc3(op))
 
         if self.dropout:
             op = self.fc_drop(op)
@@ -43,7 +47,7 @@ class MLP(nn.Module):
 mlp_0 = MLP()
 
 optimizer = torch.optim.SGD(mlp_0.parameters(), lr=0.01)
-criterion = nn.CrossEntropyLoss()
+criterion = nn.NLLLoss()
 
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('../data/mnist', train=True, download=True, transform=transforms.Compose([
@@ -96,7 +100,7 @@ def test(model):
     print(conf_mat)
 
 if __name__ == '__main__':
-    for epoch in range(1,11):
+    for epoch in range(1,3):
         train(epoch)
     torch.save(mlp_0.state_dict(), f"../saved_models/mlp_resume.pt")
     test(mlp_0)
