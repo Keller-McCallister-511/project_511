@@ -13,15 +13,37 @@ else:
 
 print('Pytorch Version: ', torch.__version__, ' Device: ', device)
 
-mlp_0 = nn.Sequential(
+'''mlp_0 = nn.Sequential(
     nn.Linear(784, 1000),
     nn.ReLU(),
     nn.Linear(1000, 10),
     nn.LogSoftmax(dim=1)
-)
+)'''
+
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.dropout = True
+        self.fc1=nn.Linear(784, 1000)
+        self.fc2=nn.Linear(1000, 10)
+        self.fc_drop = nn.Dropout(0.3)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, x):
+        op = x.view(-1, self.fc1.in_features)
+        op = F.relu(self.fc1(op))
+
+        if self.dropout:
+            op = self.fc_drop(op)
+
+        op = self.fc2(op)
+        pred = self.softmax(op)
+        return pred
+
+mlp_0 = MLP()
 
 optimizer = torch.optim.SGD(mlp_0.parameters(), lr=0.01)
-criterion = nn.NLLLoss()
+criterion = nn.CrossEntropyLoss()
 
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('../data/mnist', train=True, download=True, transform=transforms.Compose([
@@ -74,6 +96,7 @@ def test(model):
     print(conf_mat)
 
 if __name__ == '__main__':
-    for epoch in range(1,4):
+    for epoch in range(1,11):
         train(epoch)
+    torch.save(mlp_0.state_dict(), f"../saved_models/mlp_resume.pt")
     test(mlp_0)

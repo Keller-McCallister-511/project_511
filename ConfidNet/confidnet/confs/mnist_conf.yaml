@@ -34,7 +34,7 @@ training:
 # Model parameters
 model:
     name: mlp_selfconfid
-    resume: ./output/model_epoch_010.ckpt
+    resume: #./output/model_epoch_003.ckpt
     hidden_size: 1000
     is_dropout: True
 
