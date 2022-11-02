@@ -38,10 +38,10 @@ class MLP_Confid(nn.Module):
     def __init__(self):
         super().__init__()
         self.dropout = True
-        self.fc1=nn.Linear(784, 1000)
-        self.fc2=nn.Linear(1000, 10)
+        self.fc1=nn.Linear(784, 64)
+        self.fc2=nn.Linear(64, 10)
         self.fc_drop = nn.Dropout(0.3)
-        self.uc1=nn.Linear(1000, 400)
+        self.uc1=nn.Linear(64, 400)
         self.uc2=nn.Linear(400,400)
         self.uc3=nn.Linear(400,400)
         self.uc4=nn.Linear(400,400)

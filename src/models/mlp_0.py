@@ -17,8 +17,8 @@ class MLP(nn.Module):
     def __init__(self):
         super().__init__()
         self.dropout = False
-        self.fc1=nn.Linear(784, 1000)
-        self.fc2=nn.Linear(1000, 10)
+        self.fc1=nn.Linear(784, 64)
+        self.fc2=nn.Linear(64, 10)
         #self.fc3=nn.Linear(256, 512)
         #self.fc4=nn.Linear(512,10)
         self.fc_drop = nn.Dropout(0.3)
