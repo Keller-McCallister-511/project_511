@@ -4,6 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 from sklearn.metrics import confusion_matrix
+from collections import OrderedDict
 
 def one_hot_embedding(labels, num_classes):
     y = torch.eye(num_classes)
@@ -18,6 +19,20 @@ def SelfConfidMSELoss(input, target):
 
     loss = weights * (confidence - (probs * labels_hot).sum(dim=1)) ** 2
     return torch.mean(loss)
+
+def summary(results):
+    final = {}
+    for i in results:
+        for x in range(0, len(i[0])):
+            if i[0][x] in final:
+                final[i[0][x]].append(i[1][x].item())
+            else:
+                final[i[0][x]]=[i[1][x].item()]
+    for key in final:
+        final[key] = format((sum(final[key])/len(final[key]))*100., ".2f") + '%'
+    final = OrderedDict(sorted(final.items()))
+    for key in final:
+        print(key, final[key])
 
 class MLP_Confid(nn.Module):
     def __init__(self):
@@ -107,9 +122,8 @@ def test(model):
     print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) ')
     conf_mat = confusion_matrix(y_pred, y_true)
     print(conf_mat)
-    for i in results:
-        print(i[0][0])
-        print(i[1][0].item())
+    summary(results)
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="MLP_0")
     parser.add_argument('--epochs', type=int, default=25, metavar='N', help='number of epochs for training (default: 25)')
