@@ -12,7 +12,7 @@ training:
     output_folder: ./output_conf
     task: classification
     learner: selfconfid
-    nb_epochs: 3
+    nb_epochs: 5
     batch_size: 128
     loss:
         name: selfconfid_mse
@@ -34,7 +34,7 @@ training:
 # Model parameters
 model:
     name: mlp_selfconfid
-    resume: #./output/model_epoch_003.ckpt
+    resume: ./output/model_epoch_005.ckpt
     hidden_size: 1000
     is_dropout: True
 

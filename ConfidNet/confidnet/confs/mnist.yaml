@@ -12,7 +12,7 @@ training:
     output_folder: ./output
     task: classification
     learner: default
-    nb_epochs: 3
+    nb_epochs: 5
     batch_size: 128
     loss:
         name: cross_entropy
