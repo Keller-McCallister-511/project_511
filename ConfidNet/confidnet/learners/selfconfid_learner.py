@@ -147,7 +147,6 @@ class SelfConfidLearner(AbstractLeaner):
                 # Update metrics
                 pred = output[0].argmax(dim=1, keepdim=True)
                 confidence = torch.sigmoid(output[1])
-                print(f'pred: {pred}\tconf: {confidence}')
                 metrics.update(pred, target, confidence)
 
         scores = metrics.get_scores(split=split)

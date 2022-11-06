@@ -135,7 +135,7 @@ if __name__ == '__main__':
         for epoch in range(1, args.epochs+1):
             model.load_state_dict(torch.load("../saved_models/mlp_resume.pt"), strict=False)
             train(epoch)
-            torch.save(model.state_dict(), f"../saved_models/mlp_confidence.pt")
+            torch.save(model.state_dict(), f"../saved_models/mlp_confidence_new.pt")
     
     if args.test:
         model.load_state_dict(torch.load('../saved_models/mlp_confidence.pt'))
