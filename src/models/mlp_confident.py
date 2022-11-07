@@ -21,18 +21,35 @@ def SelfConfidMSELoss(input, target):
     return torch.mean(loss)
 
 def summary(results):
-    final = {}
+    correct = {}
+    miss = {}
+    good = 0
+    bad = 0
     for i in results:
         for x in range(0, len(i[0])):
-            if i[0][x] in final:
-                final[i[0][x]].append(i[1][x].item())
+            if i[0][x] == i[2][x]:
+                if i[0][x] in correct:
+                    correct[i[0][x]].append(i[1][x].item())
+                else:
+                    correct[i[0][x]]=[i[1][x].item()]
+                good += 1
             else:
-                final[i[0][x]]=[i[1][x].item()]
-    for key in final:
-        final[key] = format((sum(final[key])/len(final[key]))*100., ".2f") + '%'
-    final = OrderedDict(sorted(final.items()))
-    for key in final:
-        print(key, final[key])
+                if i[0][x] in miss:
+                    miss[i[0][x]].append(i[1][x].item())
+                else:
+                    miss[i[0][x]]=[i[1][x].item()]
+                bad += 1
+    for key in correct:
+        correct[key] = format((sum(correct[key])/len(correct[key]))*100., ".2f") + '%'
+    for key in miss:
+        miss[key] = format((sum(miss[key])/len(miss[key]))*100., ".2f") + '%'
+    correct = OrderedDict(sorted(correct.items()))
+    miss = OrderedDict(sorted(miss.items()))
+    print('\t Correct\tIncorrect')
+    for key in correct:
+        print(f'Class {key}: {correct[key]}\t  {miss[key]}')
+    print(good)
+    print(bad)
 
 class MLP_Confid(nn.Module):
     def __init__(self):
@@ -114,7 +131,12 @@ def test(model):
             y_pred.extend(op)
             target = target.data.cpu().numpy()
             y_true.extend(target)
-            output = [op, uncertainty]
+            '''for i in range(0, len(op)):
+                if(op[i]!=target[i]):
+                    print("\n",op[i], target[i], uncertainty[i],"\n")
+                else:
+                    print(op[i], target[i], uncertainty[i])'''
+            output = [op, uncertainty, target]
             results.append(output)
             
     
@@ -135,7 +157,7 @@ if __name__ == '__main__':
         for epoch in range(1, args.epochs+1):
             model.load_state_dict(torch.load("../saved_models/mlp_resume.pt"), strict=False)
             train(epoch)
-            torch.save(model.state_dict(), f"../saved_models/mlp_confidence_new.pt")
+            torch.save(model.state_dict(), f"../saved_models/mlp_confidence.pt")
     
     if args.test:
         model.load_state_dict(torch.load('../saved_models/mlp_confidence.pt'))
