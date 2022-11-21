@@ -3,8 +3,9 @@ import torch
 from torch import nn 
 import torch.nn.functional as F
 from torchvision import datasets, transforms
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, average_precision_score
 from collections import OrderedDict
+import numpy as np
 
 def one_hot_embedding(labels, num_classes):
     y = torch.eye(num_classes)
@@ -113,6 +114,7 @@ def test(model):
     y_pred=[]
     y_true=[]
     results=[]
+    acc, err, proba_pred = [],[],[]
     model.eval()
     test_loss = 0
     correct=0
@@ -129,15 +131,14 @@ def test(model):
             uncertainty = output[1]
             uncertainty = torch.sigmoid(uncertainty)
             y_pred.extend(op)
-            target = target.data.cpu().numpy()
+            t = target.data.cpu().numpy()
             y_true.extend(target)
-            '''for i in range(0, len(op)):
-                if(op[i]!=target[i]):
-                    print("\n",op[i], target[i], uncertainty[i],"\n")
-                else:
-                    print(op[i], target[i], uncertainty[i])'''
-            output = [op, uncertainty, target]
+            output = [op, uncertainty, t]
             results.append(output)
+            acc.extend(pred.eq(target.view_as(pred)).detach().to("cpu").numpy())
+            err.extend((pred != target.view_as(pred)).detach().to("cpu").numpy())
+            proba_pred.extend(uncertainty.detach().to("cpu").numpy())
+
             
     
     test_loss/=len(test_loader.dataset)
@@ -145,6 +146,12 @@ def test(model):
     conf_mat = confusion_matrix(y_pred, y_true)
     print(conf_mat)
     summary(results)
+    err = np.reshape(err, newshape=(len(err), -1)).flatten()
+    proba_pred = np.reshape(proba_pred, newshape=(len(proba_pred), -1)).flatten()
+    ap_errors = average_precision_score(err, -(proba_pred))
+    ap_succ = average_precision_score(acc, (proba_pred))
+    print(f'{(ap_errors):05.2%}')
+    print(f'{(ap_succ):05.2%}')
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="MLP_0")

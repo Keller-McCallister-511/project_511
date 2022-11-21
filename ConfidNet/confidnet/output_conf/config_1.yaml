@@ -9,10 +9,10 @@ data:
 
 # Training parameters
 training:
-    output_folder: /home/williamkeller/software/git/project_511/ConfidNet/confidnet/output_conf
+    output_folder: ./output_conf
     task: classification
     learner: selfconfid
-    nb_epochs: 5
+    nb_epochs: 10
     batch_size: 128
     loss:
         name: selfconfid_mse
@@ -34,7 +34,7 @@ training:
 # Model parameters
 model:
     name: mlp_selfconfid
-    resume: /home/williamkeller/software/git/project_511/ConfidNet/confidnet/output/model_epoch_005.ckpt
+    resume: ./output/model_epoch_010.ckpt
     hidden_size: 1000
     is_dropout: True
 

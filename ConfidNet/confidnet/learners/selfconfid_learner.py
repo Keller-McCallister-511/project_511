@@ -132,7 +132,6 @@ class SelfConfidLearner(AbstractLeaner):
         self.model.eval()
         metrics = Metrics(self.metrics, len_dataset, self.num_classes)
         loss = 0
-
         # Evaluation loop
         loop = tqdm(dloader, disable=not verbose)
         for batch_id, (data, target) in enumerate(loop):

@@ -61,6 +61,16 @@ class Metrics:
                 "string": f"{accuracy_success:05.2%}",
             }
         if "ap_errors" in self.metrics:
+            x=0
+            y=0
+            for i in self.errors:
+                if i == True:
+                    x+=1
+                else:
+                    y+=1
+            print(x, y)
+            print(self.proba_pred)
+            print(-self.proba_pred)
             ap_errors = average_precision_score(self.errors, -self.proba_pred)
             scores[f"{split}/ap_errors"] = {"value": ap_errors, "string": f"{ap_errors:05.2%}"}
         if "accuracy_errors" in self.metrics:
