@@ -22,7 +22,7 @@ class MLP(nn.Module):
         #self.fc3=nn.Linear(256, 512)
         #self.fc4=nn.Linear(512,10)
         self.fc_drop = nn.Dropout(0.3)
-        self.softmax = nn.LogSoftmax(dim=1)
+        #self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
         op = x.view(-1, self.fc1.in_features)
@@ -33,14 +33,14 @@ class MLP(nn.Module):
         if self.dropout:
             op = self.fc_drop(op)
 
-        op = self.fc2(op)
-        pred = self.softmax(op)
+        pred = self.fc2(op)
+        #pred = self.softmax(op)
         return pred
 
 mlp_0 = MLP()
 
 optimizer = torch.optim.SGD(mlp_0.parameters(), lr=0.01)
-criterion = nn.NLLLoss()
+criterion = nn.CrossEntropyLoss()
 
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('../data/mnist', train=True, download=True, transform=transforms.Compose([

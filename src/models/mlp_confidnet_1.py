@@ -56,12 +56,12 @@ class MLP_Confid(nn.Module):
     def __init__(self):
         super().__init__()
         self.dropout = True
-        self.fc1=nn.Linear(784, 1000)
-        self.fc2=nn.Linear(1000, 256)
-        self.fc3=nn.Linear(256, 512)
-        self.fc4=nn.Linear(512,10)
+        self.fc1=nn.Linear(784, 512)
+        self.fc2=nn.Linear(512, 256)
+        self.fc3=nn.Linear(256, 128)
+        self.fc4=nn.Linear(128,10)
         self.fc_drop = nn.Dropout(0.3)
-        self.uc1=nn.Linear(1000, 400)
+        self.uc1=nn.Linear(128, 400)
         self.uc2=nn.Linear(400,400)
         self.uc3=nn.Linear(400,400)
         self.uc4=nn.Linear(400,400)
@@ -69,14 +69,14 @@ class MLP_Confid(nn.Module):
 
     def forward(self, x):
         op = x.view(-1, self.fc1.in_features)
-        op1 = F.relu(self.fc1(op))
-        op = F.relu(self.fc2(op1))
+        op = F.relu(self.fc1(op))
+        op = F.relu(self.fc2(op))
         op = F.relu(self.fc3(op))
 
         if self.dropout:
             op = self.fc_drop(op)
         
-        uc = F.relu(self.uc1(op1))
+        uc = F.relu(self.uc1(op))
         uc = F.relu(self.uc2(uc))
         uc = F.relu(self.uc3(uc))
         uc = F.relu(self.uc4(uc))
@@ -87,7 +87,7 @@ class MLP_Confid(nn.Module):
 
 model = MLP_Confid()
 
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('../data/mnist', train=True, download=True, transform=transforms.Compose([
@@ -114,7 +114,7 @@ def train(epoch):
             print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} '+
                   f'({(100.*batch_idx/len(train_loader)):.2f}%)]\tLoss: {loss.item():.6f}')
                   
-def test(model):
+def test(model, best):
     y_pred=[]
     y_true=[]
     results=[]
@@ -157,19 +157,25 @@ def test(model):
     ap_succ = average_precision_score(acc, (proba_pred))
     print(f'{(ap_errors):05.2%}')
     print(f'{(ap_succ):05.2%}')
+    if(ap_errors>best): best = ap_errors
+    return best
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="MLP_0")
     parser.add_argument('--epochs', type=int, default=25, metavar='N', help='number of epochs for training (default: 25)')
     parser.add_argument('--train', action='store_true', default=False, help='train model')
     parser.add_argument('--test', action='store_true', default=False, help='test model')
     args=parser.parse_args()
+    best = 0
 
     if args.train:
         for epoch in range(1, args.epochs+1):
             model.load_state_dict(torch.load("../saved_models/mlp_1_resume.pt"), strict=False)
             train(epoch)
+            best=test(model, best)
             torch.save(model.state_dict(), f"../saved_models/mlp_confidence_1.pt")
+        print(best)
     
     if args.test:
         model.load_state_dict(torch.load('../saved_models/mlp_confidence_1.pt'))
-        test(model)
+        test(model, best)

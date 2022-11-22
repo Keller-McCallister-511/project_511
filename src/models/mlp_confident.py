@@ -83,7 +83,7 @@ class MLP_Confid(nn.Module):
 
 model = MLP_Confid()
 
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('../data/mnist', train=True, download=True, transform=transforms.Compose([
