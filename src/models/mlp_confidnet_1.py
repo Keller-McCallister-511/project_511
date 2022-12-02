@@ -7,6 +7,13 @@ from sklearn.metrics import confusion_matrix, average_precision_score
 from collections import OrderedDict
 import numpy as np
 
+if torch.cuda.is_available():
+    device=torch.device('cuda')
+else:
+    device = torch.device('cpu')
+
+print('Pytorch Version: ', torch.__version__, ' Device: ', device)
+
 def one_hot_embedding(labels, num_classes):
     y = torch.eye(num_classes)
     return y[labels]
@@ -60,7 +67,7 @@ class MLP_Confid(nn.Module):
         self.fc2=nn.Linear(512, 256)
         self.fc3=nn.Linear(256, 128)
         self.fc4=nn.Linear(128,10)
-        self.fc_drop = nn.Dropout(0.3)
+        #self.fc_drop = nn.Dropout(0.3)
         self.uc1=nn.Linear(128, 400)
         self.uc2=nn.Linear(400,400)
         self.uc3=nn.Linear(400,400)
@@ -73,8 +80,8 @@ class MLP_Confid(nn.Module):
         op = F.relu(self.fc2(op))
         op = F.relu(self.fc3(op))
 
-        if self.dropout:
-            op = self.fc_drop(op)
+        #if self.dropout:
+        #    op = self.fc_drop(op)
         
         uc = F.relu(self.uc1(op))
         uc = F.relu(self.uc2(uc))
@@ -101,10 +108,14 @@ test_loader = torch.utils.data.DataLoader(
     ])), batch_size=128, shuffle=True
 )
 
-def train(epoch):
+def train(model,epoch, best_ape):
     model.train()
+    #set_train()
+    #disable_bn()
+    loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
-        data = data.view(-1, 784)
+        #data = data.view(-1, 784)
+        data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
         loss = SelfConfidMSELoss(output, target)
@@ -113,16 +124,50 @@ def train(epoch):
         if batch_idx % 100 == 0:
             print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} '+
                   f'({(100.*batch_idx/len(train_loader)):.2f}%)]\tLoss: {loss.item():.6f}')
+    
+    acc, err, proba_pred = [],[],[]   
+    model.eval()
+    test_loss = 0
+    correct=0
+    
+    with torch.no_grad():
+        for data, target in test_loader:
+            data=data.view(-1,784)
+            output=model(data)
+            test_loss+=SelfConfidMSELoss(output,target).item()
+            pred = output[0].data.max(1, keepdim=True)[1]
+            correct+= pred.eq(target.data.view_as(pred)).sum()
+            uncertainty = output[1]
+            uncertainty = torch.sigmoid(uncertainty)
+            acc.extend(pred.eq(target.view_as(pred)).detach().to("cpu").numpy())
+            err.extend((pred != target.view_as(pred)).detach().to("cpu").numpy())
+            proba_pred.extend(uncertainty.detach().to("cpu").numpy())
+            
+    test_loss/=len(test_loader.dataset)
+    print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) ')
+    acc = np.reshape(acc, newshape=(len(acc),-1)).flatten()
+    err = np.reshape(err, newshape=(len(err), -1)).flatten()
+    proba_pred = np.reshape(proba_pred, newshape=(len(proba_pred), -1)).flatten()
+    ap_errors = average_precision_score(err, -(proba_pred))
+    ap_succ = average_precision_score(acc, (proba_pred))
+    print(f'AP_Errors: {(ap_errors):05.2%}')
+    print(f'AP_Success: {(ap_succ):05.3%}', end='\n\n')
+    if ap_errors>best_ape:
+        print('Better AP_Error')
+        best_ape = ap_errors
+        torch.save(model.state_dict(), f"../saved_models/mlp_confidence_1.pt")
+    return best_ape
+
                   
-def test(model, best):
+def test(model):
     y_pred=[]
     y_true=[]
     results=[]
     acc, err, proba_pred = [],[],[]
+    acc_dict, err_dict, proba_pred_dict = {},{},{}
     model.eval()
     test_loss = 0
     correct=0
-
     with torch.no_grad():
         for data, target in test_loader:
             data=data.view(-1,784)
@@ -142,40 +187,54 @@ def test(model, best):
             acc.extend(pred.eq(target.view_as(pred)).detach().to("cpu").numpy())
             err.extend((pred != target.view_as(pred)).detach().to("cpu").numpy())
             proba_pred.extend(uncertainty.detach().to("cpu").numpy())
-            
-            
-    
+            for i in range(0,len(pred)):
+                if pred[i].item() in acc_dict:
+                    acc_dict[pred[i].item()].extend([pred.eq(target.view_as(pred)).detach().to("cpu").numpy()[i]])
+                    err_dict[pred[i].item()].extend([(pred != target.view_as(pred)).detach().to("cpu").numpy()[i]])
+                    proba_pred_dict[pred[i].item()].extend([uncertainty.detach().to("cpu").numpy()[i]])
+                else:
+                    acc_dict[pred[i].item()] = [pred.eq(target.view_as(pred)).detach().to("cpu").numpy()[i]]
+                    err_dict[pred[i].item()] = [(pred != target.view_as(pred)).detach().to("cpu").numpy()[i]]
+                    proba_pred_dict[pred[i].item()] = [uncertainty.detach().to("cpu").numpy()[i]]
+    total = 0
+    total2 = 0
+    for i in range(0,10):
+        acc_dict[i] = np.reshape(acc_dict[i], newshape=(len(acc_dict[i]),-1)).flatten()
+        err_dict[i] = np.reshape(err_dict[i], newshape=(len(err_dict[i]), -1)).flatten()
+        proba_pred_dict[i] = np.reshape(proba_pred_dict[i], newshape=(len(proba_pred_dict[i]), -1)).flatten()
+        print(f'{i}: {(average_precision_score(err_dict[i], -proba_pred_dict[i])):05.2%}', end=' ')
+        print(f'{(average_precision_score(acc_dict[i], proba_pred_dict[i])):05.2%}')
     test_loss/=len(test_loader.dataset)
     print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) ')
-    conf_mat = confusion_matrix(y_pred, y_true)
-    print(conf_mat)
-    summary(results)
-    acc = np.reshape(acc, newshape=(len(acc), -1)).flatten()
+    #conf_mat = confusion_matrix(y_pred, y_true)
+    #print(conf_mat)
+    #summary(results)
+    acc = np.reshape(acc, newshape=(len(acc),-1)).flatten()
     err = np.reshape(err, newshape=(len(err), -1)).flatten()
     proba_pred = np.reshape(proba_pred, newshape=(len(proba_pred), -1)).flatten()
     ap_errors = average_precision_score(err, -(proba_pred))
     ap_succ = average_precision_score(acc, (proba_pred))
-    print(f'{(ap_errors):05.2%}')
-    print(f'{(ap_succ):05.2%}')
-    if(ap_errors>best): best = ap_errors
-    return best
-
+    print(f'AP_errors: {(ap_errors):05.2%}')
+    print(f'AP_success: {(ap_succ):05.2%}')
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="MLP_0")
     parser.add_argument('--epochs', type=int, default=25, metavar='N', help='number of epochs for training (default: 25)')
     parser.add_argument('--train', action='store_true', default=False, help='train model')
     parser.add_argument('--test', action='store_true', default=False, help='test model')
+    parser.add_argument('--print', action='store_true', default=False, help='print model')
     args=parser.parse_args()
-    best = 0
 
+    if args.print:
+        print(model)
+        
     if args.train:
+        best_ape = 0
+        model.load_state_dict(torch.load("../saved_models/mlp_1_resume.pt"), strict=False)
         for epoch in range(1, args.epochs+1):
-            model.load_state_dict(torch.load("../saved_models/mlp_1_resume.pt"), strict=False)
-            train(epoch)
-            best=test(model, best)
-            torch.save(model.state_dict(), f"../saved_models/mlp_confidence_1.pt")
-        print(best)
-    
+            print('Best: ', best_ape)
+            best_ape=train(model,epoch,best_ape)
+                
     if args.test:
         model.load_state_dict(torch.load('../saved_models/mlp_confidence_1.pt'))
-        test(model, best)
+        test(model)

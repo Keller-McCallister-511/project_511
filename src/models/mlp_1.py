@@ -54,18 +54,43 @@ test_loader = torch.utils.data.DataLoader(
     ])), batch_size=128, shuffle=True
 )
 
-def train(epoch):
-    mlp_1.train()
+def train(model, epoch, best_acc):
+    model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data = data.view(-1, 784)
         optimizer.zero_grad()
-        output = mlp_1(data)
+        output = model(data)
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
         if batch_idx % 100 == 0:
             print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} '+
                   f'({(100.*batch_idx/len(train_loader)):.2f}%)]\tLoss: {loss.item():.6f}')
+        
+    model.eval()
+    test_loss = 0
+    correct=0
+
+    with torch.no_grad():
+        for data, target in test_loader:
+            data=data.view(-1,784)
+            output=model(data)
+            test_loss+=criterion(output,target).item()
+            pred = output.data.max(1, keepdim=True)[1]
+            correct+= pred.eq(target.data.view_as(pred)).sum()
+
+            output = (torch.max(torch.exp(output),1)[1]).data.cpu().numpy()
+            target = target.data.cpu().numpy()
+    
+    test_loss/=len(test_loader.dataset)
+    print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) ')
+    if correct/len(test_loader.dataset) > best_acc: 
+        best_acc = correct/len(test_loader.dataset)
+        print('better')
+        torch.save(model.state_dict(), f"../saved_models/mlp_1_resume.pt")
+    return best_acc
+        
+
                   
 def test(model):
     y_pred=[]
@@ -93,17 +118,19 @@ def test(model):
     print(conf_mat)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="MLP_1")
+    parser = argparse.ArgumentParser(description="MLP_0")
     parser.add_argument('--epochs', type=int, default=25, metavar='N', help='number of epochs for training (default: 25)')
 
     parser.add_argument('--train', action='store_true', default=False, help='train model')
     parser.add_argument('--test', action='store_true', default=False, help='test model')
     args=parser.parse_args()
+    
+    best_acc=0.0
 
     if args.train:
         for epoch in range(1, args.epochs+1):
-            train(epoch)
-            torch.save(mlp_1.state_dict(), f"../saved_models/mlp_1_resume.pt")
+            print('Best:',best_acc)
+            best_acc = train(mlp_1, epoch, best_acc)
     
     if args.test:
         mlp_1.load_state_dict(torch.load('../saved_models/mlp_1_resume.pt'))
