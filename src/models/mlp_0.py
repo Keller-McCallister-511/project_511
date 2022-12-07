@@ -87,7 +87,7 @@ def train(model, epoch, best_acc):
     if correct/len(test_loader.dataset) > best_acc: 
         best_acc = correct/len(test_loader.dataset)
         print('better')
-        torch.save(mlp_0.state_dict(), f"../saved_models/mlp_plain.pt")
+        torch.save(mlp_0.state_dict(), f"../saved_models/mlp_0_resume.pt")
     return best_acc
         
 
@@ -133,5 +133,5 @@ if __name__ == '__main__':
             best_acc = train(mlp_0, epoch, best_acc)
     
     if args.test:
-        mlp_0.load_state_dict(torch.load('../saved_models/mlp_plain.pt'))
+        mlp_0.load_state_dict(torch.load('../saved_models/mlp_0_resume.pt'))
         test(mlp_0)

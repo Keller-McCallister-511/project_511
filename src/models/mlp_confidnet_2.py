@@ -28,45 +28,28 @@ def SelfConfidMSELoss(input, target):
     loss = weights * (confidence - (probs * labels_hot).sum(dim=1)) ** 2
     return torch.mean(loss)
 
-def summary(results):
-    correct = {}
-    miss = {}
-    good = 0
-    bad = 0
-    for i in results:
-        for x in range(0, len(i[0])):
-            if i[0][x] == i[2][x]:
-                if i[0][x] in correct:
-                    correct[i[0][x]].append(i[1][x].item())
-                else:
-                    correct[i[0][x]]=[i[1][x].item()]
-                good += 1
-            else:
-                if i[0][x] in miss:
-                    miss[i[0][x]].append(i[1][x].item())
-                else:
-                    miss[i[0][x]]=[i[1][x].item()]
-                bad += 1
-    for key in correct:
-        correct[key] = format((sum(correct[key])/len(correct[key]))*100., ".2f") + '%'
-    for key in miss:
-        miss[key] = format((sum(miss[key])/len(miss[key]))*100., ".2f") + '%'
-    correct = OrderedDict(sorted(correct.items()))
-    miss = OrderedDict(sorted(miss.items()))
-    print('\t Correct\tIncorrect')
-    for key in correct:
-        print(f'Class {key}: {correct[key]}\t  {miss[key]}')
-    print(good)
-    print(bad)
+def freeze_weights(model):
+    for param in model.named_parameters():
+        if "uc" in param[0]:
+            continue
+        param[1].requires_grad = False
+        print(param[0],'disabled')
+        
+        
+def disable_drop(model):
+    for layer in model.named_modules():
+        if "fc_drop" in layer[0]:
+            layer[1].eval()
+            print(layer[0], 'set to eval')
 
 class MLP_Confid(nn.Module):
     def __init__(self):
         super().__init__()
         self.dropout = True
-        self.fc1=nn.Linear(784, 512)
-        self.fc2=nn.Linear(512, 256)
+        self.fc1=nn.Linear(784, 1000)
+        self.fc2=nn.Linear(1000 , 256)
         self.fc3=nn.Linear(256, 10)
-        #self.fc_drop = nn.Dropout(0.3)
+        self.fc_drop = nn.Dropout(0.3)
         self.uc1=nn.Linear(256, 400)
         self.uc2=nn.Linear(400,400)
         self.uc3=nn.Linear(400,400)
@@ -78,8 +61,8 @@ class MLP_Confid(nn.Module):
         op = F.relu(self.fc1(op))
         op = F.relu(self.fc2(op))
 
-        #if self.dropout:
-        #    op = self.fc_drop(op)
+        if self.dropout:
+            op = self.fc_drop(op)
         
         uc = F.relu(self.uc1(op))
         uc = F.relu(self.uc2(uc))
@@ -108,11 +91,8 @@ test_loader = torch.utils.data.DataLoader(
 
 def train(model,epoch, best_ape):
     model.train()
-    #set_train()
-    #disable_bn()
     loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
-        #data = data.view(-1, 784)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
@@ -124,7 +104,6 @@ def train(model,epoch, best_ape):
                   f'({(100.*batch_idx/len(train_loader)):.2f}%)]\tLoss: {loss.item():.6f}')
     
     acc, err, proba_pred = [],[],[]   
-    model.eval()
     test_loss = 0
     correct=0
     
@@ -160,7 +139,6 @@ def train(model,epoch, best_ape):
 def test(model):
     y_pred=[]
     y_true=[]
-    results=[]
     acc, err, proba_pred = [],[],[]
     acc_dict, err_dict, proba_pred_dict = {},{},{}
     model.eval()
@@ -180,8 +158,6 @@ def test(model):
             y_pred.extend(op)
             t = target.data.cpu().numpy()
             y_true.extend(target)
-            output = [op, uncertainty, t]
-            results.append(output)
             acc.extend(pred.eq(target.view_as(pred)).detach().to("cpu").numpy())
             err.extend((pred != target.view_as(pred)).detach().to("cpu").numpy())
             proba_pred.extend(uncertainty.detach().to("cpu").numpy())
@@ -194,19 +170,22 @@ def test(model):
                     acc_dict[pred[i].item()] = [pred.eq(target.view_as(pred)).detach().to("cpu").numpy()[i]]
                     err_dict[pred[i].item()] = [(pred != target.view_as(pred)).detach().to("cpu").numpy()[i]]
                     proba_pred_dict[pred[i].item()] = [uncertainty.detach().to("cpu").numpy()[i]]
-    total = 0
-    total2 = 0
+                    
+    test_loss/=len(test_loader.dataset)
+    print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) \n')
+
+    print("Class\tAP_Error   AP_Success")
     for i in range(0,10):
         acc_dict[i] = np.reshape(acc_dict[i], newshape=(len(acc_dict[i]),-1)).flatten()
         err_dict[i] = np.reshape(err_dict[i], newshape=(len(err_dict[i]), -1)).flatten()
         proba_pred_dict[i] = np.reshape(proba_pred_dict[i], newshape=(len(proba_pred_dict[i]), -1)).flatten()
-        print(f'{i}: {(average_precision_score(err_dict[i], -proba_pred_dict[i])):05.2%}', end=' ')
+        print(f'  {i}:    {(average_precision_score(err_dict[i], -proba_pred_dict[i])):05.2%}', end='     ')
         print(f'{(average_precision_score(acc_dict[i], proba_pred_dict[i])):05.2%}')
-    test_loss/=len(test_loader.dataset)
-    print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) ')
+    print()
+    
+    #print(f'Test Set: Avg. Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({(100.*correct/len(test_loader.dataset)):.2f}%) ')
     #conf_mat = confusion_matrix(y_pred, y_true)
     #print(conf_mat)
-    #summary(results)
     acc = np.reshape(acc, newshape=(len(acc),-1)).flatten()
     err = np.reshape(err, newshape=(len(err), -1)).flatten()
     proba_pred = np.reshape(proba_pred, newshape=(len(proba_pred), -1)).flatten()
@@ -224,15 +203,24 @@ if __name__ == '__main__':
     args=parser.parse_args()
 
     if args.print:
-        print(model)
-        
+        count = 1
+        freeze_weights(model)
+        disable_drop(model)
+        for param in model.named_parameters():
+            print(param)
+        for layer in model.named_modules():
+            print(layer)
     if args.train:
         best_ape = 0
         model.load_state_dict(torch.load("../saved_models/mlp_2_resume.pt"), strict=False)
+        freeze_weights(model)
+        disable_drop(model)
         for epoch in range(1, args.epochs+1):
             print('Best: ', best_ape)
             best_ape=train(model,epoch,best_ape)
                 
     if args.test:
-        model.load_state_dict(torch.load('../saved_models/mlp_confidence_2.pt'))
+        model.load_state_dict(torch.load('../saved_models/mlp_confidence_2.pt'), strict=False)
         test(model)
+        
+    

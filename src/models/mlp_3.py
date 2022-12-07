@@ -17,11 +17,11 @@ class MLP(nn.Module):
     def __init__(self):
         super().__init__()
         self.dropout = False
-        self.fc1=nn.Linear(784, 512)
-        self.fc2=nn.Linear(512, 256)
-        self.fc3=nn.Linear(256, 128)
-        self.fc4=nn.Linear(128,256)
-        self.fc5=nn.Linear(256,10)
+        self.fc1=nn.Linear(784, 1000)
+        self.fc2=nn.Linear(1000, 256)
+        self.fc3=nn.Linear(256, 64)
+        self.fc4=nn.Linear(64, 128)
+        self.fc5=nn.Linear(128,10)
         self.fc_drop = nn.Dropout(0.3)
         #self.softmax = nn.LogSoftmax(dim=1)
 
@@ -31,6 +31,7 @@ class MLP(nn.Module):
         op = F.relu(self.fc2(op))
         op = F.relu(self.fc3(op))
         op = F.relu(self.fc4(op))
+
         if self.dropout:
             op = self.fc_drop(op)
 
